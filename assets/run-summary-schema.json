@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DataLabLiteRunSummary",
+  "type": "object",
+  "required": [
+    "created_at",
+    "goal",
+    "input_files",
+    "outputs",
+    "warnings"
+  ],
+  "properties": {
+    "created_at": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "input_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_shape": {
+      "type": "object"
+    },
+    "target": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "split_strategy": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "best_model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "key_findings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}
