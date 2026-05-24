@@ -26,6 +26,8 @@
 SKILL.md                         主指令
 references/routing.md            任务分级与拆分规则
 references/data-analysis-playbook.md  数据读取、清洗、EDA
+references/multi-source-playbook.md   多文件/多表合并与来源追踪
+references/execution-loop.md          执行-观察-修正循环
 references/modeling-playbook.md       建模强基线与评估
 references/statistics-playbook.md     统计分析和交互解释
 references/visualization-guide.md     图表规范与中文字体检查
@@ -34,6 +36,7 @@ references/failure-modes.md           常见失败模式
 scripts/bootstrap_project.py           最小项目初始化脚本
 scripts/analyze_template.py            单脚本分析模板
 scripts/model_ladder_template.py       模型梯队模板
+scripts/validate_run.py                运行产物校验脚本
 assets/report-template.md              报告模板
 assets/run-summary-schema.json         run_summary.json 建议结构
 ```
@@ -47,9 +50,12 @@ python scripts/bootstrap_project.py --project-root ./analysis_project --data /pa
 cp scripts/analyze_template.py ./analysis_project/scripts/analyze.py
 # 根据用户目标修改 analyze.py，然后运行
 python ./analysis_project/scripts/analyze.py --data ./analysis_project/data/raw/data.csv --target TARGET
+python scripts/validate_run.py --project-root ./analysis_project
 ```
 
 实际使用时，Agent 可以直接生成更贴合当前数据的 `scripts/analyze.py`，不必机械复制模板。
+
+`run_summary.json` 至少应记录任务级别、输入文件、生成产物、质量门、警告、限制和下一步建议。
 
 ## 什么时候不要升级成复杂项目
 

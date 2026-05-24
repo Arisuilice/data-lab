@@ -11,6 +11,7 @@
 | json/jsonl | `pd.read_json` |
 | parquet/feather | `pd.read_parquet` / `pd.read_feather` |
 | sqlite | `sqlite3` + `pd.read_sql_query` |
+| fwf/fixed-width | `pd.read_fwf` |
 
 读取后必须记录：
 
@@ -20,6 +21,15 @@
 - 前 5 行样本；
 - 内存占用；
 - 读取假设和警告。
+
+SQLite 读取规则：
+
+- 单表数据库可直接读取该表；
+- 多表数据库先读 `multi-source-playbook.md`，不要盲目选择第一个表；
+- 忽略 `sqlite_` 开头的内部表；
+- 如果用户给出 SQL 或表名，优先使用用户指定内容。
+
+固定宽度文本默认用 `.fwf` 扩展名识别。`.txt` 默认仍按分隔符文本读取；只有字段位置固定且分隔符解析失败时才切换 `read_fwf`。
 
 ## 2. 字段标准化
 

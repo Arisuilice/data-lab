@@ -40,6 +40,8 @@ outputs/tables/*
 outputs/figures/*
 ```
 
+如果输入是 SQLite 单表或多个结构相同的文件，仍可保持 Standard。
+
 ### Expanded
 
 适用：
@@ -50,6 +52,8 @@ outputs/figures/*
 - 单脚本会变得难以阅读。
 
 产物：2-5 个脚本，按问题拆，不建 DAG。
+
+多源任务进入 Expanded 前先读 `multi-source-playbook.md`。如果只是一次简单 merge，不要因为文件多就升级。
 
 ### Project
 
@@ -92,3 +96,4 @@ outputs/figures/*
 - 如果脚本太长，拆脚本；
 - 如果任务目标发散，先收敛到用户最关心的问题；
 - 如果出现流程性产物多但发现少，立即降级到核心分析。
+- 如果运行失败，先用 `execution-loop.md` 做一轮最小修正，而不是新建更复杂的框架。

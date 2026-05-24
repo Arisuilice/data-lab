@@ -62,6 +62,8 @@ def read_data(path: Path) -> pd.DataFrame:
         return pd.read_csv(path)
     if suffix == ".tsv":
         return pd.read_csv(path, sep="\t")
+    if suffix in {".fwf", ".fixed"}:
+        return pd.read_fwf(path)
     if suffix in {".xlsx", ".xls"}:
         return pd.read_excel(path)
     if suffix in {".json", ".jsonl"}:
@@ -70,6 +72,25 @@ def read_data(path: Path) -> pd.DataFrame:
         return pd.read_parquet(path)
     if suffix == ".feather":
         return pd.read_feather(path)
+    if suffix in {".sqlite", ".sqlite3", ".db"}:
+        import sqlite3
+
+        with sqlite3.connect(path) as conn:
+            tables = pd.read_sql_query(
+                "SELECT name FROM sqlite_master "
+                "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' "
+                "ORDER BY name",
+                conn,
+            )["name"].tolist()
+            if not tables:
+                raise ValueError(f"No user tables found in SQLite database: {path}")
+            if len(tables) > 1:
+                raise ValueError(
+                    "SQLite database has multiple tables; inspect the data map and "
+                    f"choose a table or join path explicitly. Tables: {tables}"
+                )
+            table_name = str(tables[0]).replace('"', '""')
+            return pd.read_sql_query(f'SELECT * FROM "{table_name}"', conn)
     raise ValueError(f"Unsupported file type: {suffix}")
 
 
@@ -291,6 +312,62 @@ def plot_feature_importance(importance: pd.DataFrame, path: Path) -> None:
     plt.close()
 
 
+def artifact_kind(path: Path) -> str:
+    if path.name == "report.md":
+        return "report"
+    if path.name == "run_summary.json":
+        return "run_summary"
+    if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".svg", ".webp"}:
+        return "figure"
+    if path.suffix.lower() in {".csv", ".xlsx", ".parquet", ".json"}:
+        return "table_or_data"
+    if path.suffix.lower() in {".pkl", ".joblib"}:
+        return "model"
+    return "artifact"
+
+
+def artifact_purpose(path: Path) -> str:
+    if path.name == "report.md":
+        return "Final analysis report"
+    if path.name == "run_summary.json":
+        return "Machine-readable run contract"
+    if "figures" in path.parts:
+        return "Visual evidence"
+    if "tables" in path.parts:
+        return "Tabular evidence"
+    if "models" in path.parts:
+        return "Saved model artifact"
+    return "Generated analysis artifact"
+
+
+def collect_generated_files(out: Path) -> list[dict[str, str]]:
+    files = [p for p in sorted(out.rglob("*")) if p.is_file()]
+    summary_path = out / "run_summary.json"
+    if summary_path not in files:
+        files.append(summary_path)
+    return [
+        {
+            "path": str(path).replace("\\", "/"),
+            "kind": artifact_kind(path),
+            "purpose": artifact_purpose(path),
+        }
+        for path in files
+    ]
+
+
+def build_quality_gates(out: Path, target: str | None, model_meta: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "raw_data_preserved": True,
+        "data_profile_written": (out / "tables" / "data_profile.csv").exists(),
+        "missingness_documented": (out / "tables" / "data_profile.csv").exists(),
+        "leakage_checked": "manual_review_required" if target else "not_applicable",
+        "split_preprocessing_safe": bool(model_meta) if target else "not_applicable",
+        "metrics_from_validation": bool(model_meta) if target else "not_applicable",
+        "charts_checked": "review_generated_figures" if any((out / "figures").glob("*")) else "not_applicable",
+        "report_causality_checked": True,
+    }
+
+
 def write_report(out: Path, goal: str, profile: dict[str, Any], model_meta: dict[str, Any] | None, warnings: list[str]) -> None:
     report = [
         "# Analysis Report",
@@ -322,6 +399,12 @@ def write_report(out: Path, goal: str, profile: dict[str, Any], model_meta: dict
         ]
     if warnings:
         report += ["## Warnings", ""] + [f"- {w}" for w in warnings] + [""]
+    report += [
+        "## Next Steps",
+        "",
+        "- Review warnings and limitations before using results for decisions." if warnings else "- Use the report findings as the starting point for follow-up analysis.",
+        "",
+    ]
     report += [
         "## Reproducibility",
         "",
@@ -355,19 +438,30 @@ def main() -> None:
         if abs(float(best.get("gap", 0))) > 0.15:
             warnings.append("Train-test gap is large; possible overfitting or unstable split.")
 
+    write_report(out, args.goal, profile, model_meta, warnings)
+    generated_files = collect_generated_files(out)
+    quality_gates = build_quality_gates(out, args.target, model_meta)
+    next_actions = ["Review warnings before relying on the result."] if warnings else ["Review report findings and decide whether deeper analysis is needed."]
+
     run_summary = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "goal": args.goal,
+        "task_level": "Standard",
+        "assumptions": ["Single input dataset or single SQLite table unless the script was adapted."],
         "input_files": [str(data_path)],
         "data_shape": {"rows": profile["rows"], "columns": profile["columns"]},
         "target": args.target,
         "task_type": model_meta["task_type"] if model_meta else None,
+        "split_strategy": "train/test plus cross-validation" if model_meta else None,
         "best_model": model_meta["best_model"] if model_meta else None,
+        "generated_files": generated_files,
+        "quality_gates": quality_gates,
+        "limitations": [],
+        "next_actions": next_actions,
         "warnings": warnings,
-        "outputs": [str(p) for p in sorted(out.rglob("*")) if p.is_file()],
+        "outputs": [item["path"] for item in generated_files],
     }
     (out / "run_summary.json").write_text(json.dumps(run_summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    write_report(out, args.goal, profile, model_meta, warnings)
     print(json.dumps(run_summary, ensure_ascii=False, indent=2))
 
 

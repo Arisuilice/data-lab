@@ -5,9 +5,13 @@
   "required": [
     "created_at",
     "goal",
+    "task_level",
     "input_files",
+    "generated_files",
     "outputs",
-    "warnings"
+    "quality_gates",
+    "warnings",
+    "next_actions"
   ],
   "properties": {
     "created_at": {
@@ -15,6 +19,15 @@
     },
     "goal": {
       "type": "string"
+    },
+    "task_level": {
+      "type": "string",
+      "enum": [
+        "Quick",
+        "Standard",
+        "Expanded",
+        "Project"
+      ]
     },
     "assumptions": {
       "type": "array",
@@ -58,6 +71,60 @@
         "null"
       ]
     },
+    "generated_files": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "required": [
+              "path",
+              "kind"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        ]
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "quality_gates": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "key_findings": {
       "type": "array",
       "items": {
@@ -76,10 +143,31 @@
         "type": "string"
       }
     },
-    "outputs": {
+    "next_actions": {
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "execution_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "observation": {
+            "type": "string"
+          },
+          "decision": {
+            "type": "string"
+          },
+          "next_action": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
       }
     }
   },

@@ -49,13 +49,17 @@ data-lab-lite/
 ├── SKILL.md
 ├── README.md
 ├── README.zh-CN.md
+├── agents/
+│   └── openai.yaml
 ├── assets/
 │   ├── report-template.md
 │   └── run-summary-schema.json
 ├── references/
 │   ├── data-analysis-playbook.md
+│   ├── execution-loop.md
 │   ├── failure-modes.md
 │   ├── modeling-playbook.md
+│   ├── multi-source-playbook.md
 │   ├── report-guide.md
 │   ├── routing.md
 │   ├── statistics-playbook.md
@@ -64,7 +68,8 @@ data-lab-lite/
 └── scripts/
     ├── analyze_template.py
     ├── bootstrap_project.py
-    └── model_ladder_template.py
+    ├── model_ladder_template.py
+    └── validate_run.py
 ```
 
 ## 快速开始
@@ -91,6 +96,12 @@ python ./analysis_project/scripts/analyze.py \
   --output-dir ./analysis_project/outputs
 ```
 
+验证生成的运行契约和核心产物：
+
+```bash
+python scripts/validate_run.py --project-root ./analysis_project
+```
+
 模板应该根据实际数据和问题调整。它是起点，不是僵硬流水线。
 
 ## 工作流
@@ -106,6 +117,8 @@ flowchart LR
 ```
 
 默认路线是 `Standard`：一个数据集、一个目标或研究方向、一个主脚本和一份报告。只有在任务包含多个独立目标、多数据源、长期协作或生产审计需求时，才升级流程。
+
+`2.2.0-lite` 额外加入一个轻量工作区契约：每次 Standard 运行都应在 `outputs/run_summary.json` 中记录输入、生成产物、质量门、警告、限制和下一步动作。
 
 ## 任务级别
 
@@ -127,6 +140,8 @@ flowchart LR
 - 指标来自验证集、测试集或交叉验证；
 - 图表有可读标签、标题、单位，并在需要时正确处理 CJK 字体；
 - 报告明确区分预测、相关、统计显著性和因果结论。
+- `outputs/run_summary.json` 包含 `task_level`、`generated_files`、`quality_gates` 和 `next_actions`；
+- `scripts/validate_run.py --project-root <project>` 能发现缺失报告或摘要字段。
 
 ## 它刻意避免什么
 

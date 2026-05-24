@@ -4,24 +4,13 @@ description: >
   快速、实用、结果导向的数据分析 Skill。用户提供 CSV、Excel、JSON、Parquet、SQLite
   或中小型表格数据，并要求数据探索、清洗、统计分析、机器学习建模、可视化或分析报告时使用。
   优先级是正确回答、强基线、可复现脚本和清晰报告；避免为简单任务创建重型流水线。
-version: 2.1.0-lite
-author: Arisuilice
-license: MIT
-metadata:
-  pattern: tool-wrapper + generator + lightweight-reviewer
-  domain: data-analysis
-  priority: efficiency-and-quality
-  min_context_window: 32000
-  supported_input_formats:
-    - csv / tsv
-    - xlsx / xls
-    - json / jsonl
-    - parquet / feather
-    - sqlite
-    - fixed-width / text with delimiter
 ---
 
 # data-lab-lite
+
+- Version: 2.2.0-lite
+- Pattern: tool-wrapper + generator + lightweight reviewer
+- License: MIT
 
 ## 0. 一句话原则
 
@@ -36,6 +25,8 @@ metadata:
 5. 只保留必要产物。
 
 不要把简单分析变成大型工作流。默认不创建状态机、DAG、多阶段 gate、AU 分片、checkpoint 系统或 evidence registry。只有任务真的需要长期协作、生产审计或复杂多目标并行时才升级。
+
+可借鉴 autonomous data-science 系统的好原则，但必须压缩成轻量契约：明确输入、保持工作区上下文、执行后观察结果、修正明显失败、记录产物和质量门。不要复刻 API server、WebUI、沙箱编排或复杂 action tag。
 
 ---
 
@@ -61,9 +52,13 @@ metadata:
 data-lab-lite/
 ├── SKILL.md
 ├── README.md
+├── agents/
+│   └── openai.yaml                # UI 元数据
 ├── references/
 │   ├── routing.md                  # 任务分级、何时拆分、何时升级
 │   ├── data-analysis-playbook.md   # 读取、清洗、EDA、字段处理
+│   ├── multi-source-playbook.md    # 多文件/多表 join 与来源追踪
+│   ├── execution-loop.md           # 轻量执行-观察-修正循环
 │   ├── modeling-playbook.md        # 监督/无监督建模强基线与指标
 │   ├── statistics-playbook.md      # 统计检验、效应量、交互项解释
 │   ├── visualization-guide.md      # 图表规范、中文字体、可读性检查
@@ -72,7 +67,8 @@ data-lab-lite/
 ├── scripts/
 │   ├── bootstrap_project.py        # 创建最小项目结构
 │   ├── analyze_template.py         # 单脚本分析模板
-│   └── model_ladder_template.py    # 强基线模型梯队模板
+│   ├── model_ladder_template.py    # 强基线模型梯队模板
+│   └── validate_run.py             # 检查报告、摘要和关键产物
 └── assets/
     ├── report-template.md          # 默认报告模板
     └── run-summary-schema.json     # run_summary.json 建议结构
@@ -83,10 +79,12 @@ data-lab-lite/
 | 场景 | 必读 |
 |---|---|
 | 任何数据文件分析 | `references/routing.md`, `references/data-analysis-playbook.md` |
+| 多文件、多表、SQLite 多表或需要合并 | `references/multi-source-playbook.md` |
 | 监督学习 / 预测建模 | `references/modeling-playbook.md`, `scripts/model_ladder_template.py` |
 | 显著性、相关、回归解释 | `references/statistics-playbook.md` |
 | 需要图表 | `references/visualization-guide.md` |
 | 需要正式报告 | `references/report-guide.md`, `assets/report-template.md` |
+| 任务需要多轮运行或脚本失败后修正 | `references/execution-loop.md` |
 | 结果差、乱码、耗时异常、结论牵强 | `references/failure-modes.md` |
 
 ---
@@ -119,7 +117,7 @@ project/
 │   └── analyze.py           # 主分析脚本
 └── outputs/
     ├── report.md            # 最终报告
-    ├── run_summary.json     # 指标、文件、警告、假设
+    ├── run_summary.json     # 指标、文件、质量门、警告、假设
     ├── tables/              # 关键表格
     ├── figures/             # 关键图表
     └── models/              # 可选模型文件
@@ -157,6 +155,8 @@ review 多级审计目录
 - 类别基数、日期字段、文本字段；
 - 可能的目标泄漏字段；
 - 数据是否存在截尾、审查、采样偏差或明显历史语境。
+
+如果有多个输入文件或 SQLite 多表，先建立数据地图：每个表的行列数、候选主键、时间字段、字段冲突、join 基数和可能的来源偏差。任何 join 前后行数变化超过预期都必须解释。
 
 ### 5.3 先强基线，后解释
 
@@ -201,6 +201,32 @@ OLS 是解释工具，不是预测性能上限。
 - 因果结论。
 
 非因果设计不得写成因果结论。
+
+### 5.6 轻量执行-观察-修正
+
+每次运行脚本后，用最短记录回答四件事：
+
+1. 本轮执行了什么；
+2. 观察到哪些指标、文件、错误或警告；
+3. 是否需要修正，原因是什么；
+4. 下一轮只改一个主要问题。
+
+最多做 3 轮针对性修正。若仍失败，停止堆流程，报告阻塞点、已验证事实和下一步需要的数据或决策。
+
+### 5.7 运行摘要契约
+
+`outputs/run_summary.json` 必须至少包含：
+
+- `task_level`：Quick / Standard / Expanded / Project；
+- `assumptions`：关键假设；
+- `input_files`：所有原始输入；
+- `generated_files`：生成产物清单；
+- `quality_gates`：数据、建模、图表、报告质量门状态；
+- `warnings`：不影响运行但影响解释的风险；
+- `limitations`：解释边界；
+- `next_actions`：建议的后续动作。
+
+保留 `outputs` 字段以兼容旧脚本，但新任务优先读取 `generated_files`。
 
 ---
 
@@ -252,6 +278,13 @@ OLS 是解释工具，不是预测性能上限。
 - 不隐藏关键限制；
 - 不输出与图表/指标矛盾的结论；
 - 给出下一步建议。
+
+### 6.5 产物门
+
+- `outputs/report.md` 存在且直接回答问题；
+- `outputs/run_summary.json` 符合 `assets/run-summary-schema.json`；
+- `generated_files` 中列出的关键产物真实存在；
+- 运行 `scripts/validate_run.py --project-root <project>` 能暴露缺失项。
 
 ---
 
@@ -307,6 +340,7 @@ xgboost lightgbm shap seaborn duckdb polars
 3. 建模任务比较了简单基线与强模型；
 4. 结论有指标、图表或统计证据支撑；
 5. 报告说明已知、未知、限制与下一步；
-6. 产物数量与任务复杂度相称。
+6. `run_summary.json` 记录输入、产物、质量门、警告和下一步；
+7. 产物数量与任务复杂度相称。
 
 速度和效果优先于程序性完整。

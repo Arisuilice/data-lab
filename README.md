@@ -49,13 +49,17 @@ data-lab-lite/
 ├── SKILL.md
 ├── README.md
 ├── README.zh-CN.md
+├── agents/
+│   └── openai.yaml
 ├── assets/
 │   ├── report-template.md
 │   └── run-summary-schema.json
 ├── references/
 │   ├── data-analysis-playbook.md
+│   ├── execution-loop.md
 │   ├── failure-modes.md
 │   ├── modeling-playbook.md
+│   ├── multi-source-playbook.md
 │   ├── report-guide.md
 │   ├── routing.md
 │   ├── statistics-playbook.md
@@ -64,7 +68,8 @@ data-lab-lite/
 └── scripts/
     ├── analyze_template.py
     ├── bootstrap_project.py
-    └── model_ladder_template.py
+    ├── model_ladder_template.py
+    └── validate_run.py
 ```
 
 ## Quick Start
@@ -91,6 +96,12 @@ python ./analysis_project/scripts/analyze.py \
   --output-dir ./analysis_project/outputs
 ```
 
+Validate the generated contract and core outputs:
+
+```bash
+python scripts/validate_run.py --project-root ./analysis_project
+```
+
 The template is meant to be edited for the actual dataset and question. It is a starting point, not a rigid pipeline.
 
 ## Workflow
@@ -106,6 +117,8 @@ flowchart LR
 ```
 
 The default route is `Standard`: one dataset, one target or research direction, one main script, and one report. Escalate only when the task has multiple independent goals, multiple data sources, long-running collaboration needs, or production/audit requirements.
+
+Version `2.2.0-lite` also adds a small workspace contract inspired by autonomous data-science systems: every Standard run should record inputs, generated files, quality gates, warnings, limitations, and next actions in `outputs/run_summary.json`.
 
 ## Task Levels
 
@@ -127,6 +140,8 @@ Before considering an analysis complete, this Skill expects:
 - metrics taken from validation, test, or cross-validation;
 - charts with readable labels, titles, units, and working CJK font handling when needed;
 - reports that distinguish prediction, correlation, statistical significance, and causality.
+- `outputs/run_summary.json` with `task_level`, `generated_files`, `quality_gates`, and `next_actions`;
+- `scripts/validate_run.py --project-root <project>` able to catch missing report or summary fields.
 
 ## What It Avoids
 
@@ -160,4 +175,4 @@ xgboost lightgbm shap seaborn duckdb polars
 
 ## License
 
-MIT License. See `SKILL.md` metadata for the declared license.
+MIT License.

@@ -69,8 +69,27 @@ def main() -> None:
 
     summary = {
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "goal": "Initialize a minimal data-lab-lite analysis project.",
+        "task_level": "Standard",
+        "assumptions": ["This is an initialized project; analysis has not run yet."],
+        "input_files": copied,
         "project_root": str(root),
         "copied_data": copied,
+        "generated_files": [
+            {
+                "path": "outputs/run_summary.json",
+                "kind": "run_summary",
+                "purpose": "Initial project setup summary",
+            }
+        ],
+        "outputs": ["outputs/run_summary.json"],
+        "quality_gates": {
+            "analysis_run": False,
+            "report_written": False,
+        },
+        "warnings": ["Run the adapted analysis script before treating this project as complete."],
+        "limitations": ["No analysis outputs exist yet."],
+        "next_actions": ["Adapt scripts/analyze.py to the dataset and run the analysis."],
         "structure": [
             "data/raw",
             "data/processed",

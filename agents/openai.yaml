@@ -1,0 +1,7 @@
+interface:
+  display_name: "Data Lab Lite"
+  short_description: "Lightweight reproducible data analysis"
+  default_prompt: "Use $data-lab-lite to analyze this dataset, run strong baselines, and write a concise reproducible report."
+
+policy:
+  allow_implicit_invocation: true
